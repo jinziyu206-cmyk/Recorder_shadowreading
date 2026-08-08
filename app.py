@@ -7,6 +7,8 @@ import google.generativeai as genai
 
 # 安全地从配置文件中读取 API Key，而不是直接写死在代码里
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# 临时打印 key 的前 8 位，确认读到的格式是否正常
+st.write("当前生效的 Key 开头是:", st.secrets["GEMINI_API_KEY"][:8])
 
 # 1. 网页基本设置
 st.set_page_config(page_title="私人配音跟读教练", page_icon="🎙️", layout="centered")
@@ -78,7 +80,7 @@ if 'sentences' in st.session_state:
             # 如果录到了声音，自动回放
             if audio_data:
                 st.audio(audio_data['bytes'], format="audio/wav")
-                
+
                 if st.button("✨ 让 AI 外教听听我的发音", key=f"ai_diag_{i}"):
                     with st.spinner("AI 正在认真听你的发音细节..."):
                         try:
