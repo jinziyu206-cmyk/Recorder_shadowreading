@@ -2,6 +2,7 @@ import streamlit as st
 from gtts import gTTS
 import os
 import tempfile
+from streamlit_mic_recorder import mic_recorder
 
 # 1. 网页基本设置
 st.set_page_config(page_title="私人配音跟读教练", page_icon="🎙️", layout="centered")
