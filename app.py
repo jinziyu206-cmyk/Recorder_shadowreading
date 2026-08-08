@@ -78,30 +78,36 @@ if 'sentences' in st.session_state:
             # 如果录到了声音，自动回放
             if audio_data:
                 st.audio(audio_data['bytes'], format="audio/wav")
-                if st.button("🎙️ 让 AI 直接‘听’我的发音并诊断", key=f"ai_diag_{i}"):
+                
+                if st.button("✨ 让 AI 外教听听我的发音", key=f"ai_diag_{i}"):
                     with st.spinner("AI 正在认真听你的发音细节..."):
-                        # 1. 准备音频数据
-                        audio_file = {
-                            "mime_type": "audio/wav",
-                            "data": audio_data['bytes']
-                        }
+                        try:
+                            # 1. 把录音字节存为临时文件
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+                                f.write(audio_data['bytes'])
+                                temp_audio_path = f.name
 
-                        # 2. 准备提示词，直接把音频和标准句一起发给 AI
-                        model = genai.GenerativeModel("gemini-1.5-flash")  # 或者 gemini-1.5-pro
-                        prompt = f"""
-                            你是一位专业的英语口语私教。
-                            这是标准原句："{sentence}"
-                            这是学生读出来的音频。
-                            请直接听这段音频，并针对以下几点给出建议（B1-B2难度，鼓励风格）：
-                            1. 单词准确度（是否有读错或吞音）。
-                            2. 语调与流利度（是否生硬，连读是否自然）。
-                            3. 给出一个具体的微调建议。
-                            """
+                            # 2. 使用 Gemini 官方文件上传接口
+                            audio_file_ref = genai.upload_file(temp_audio_path, mime_type="audio/wav")
 
-                        # 3. 发送给 AI 听
-                        response = model.generate_content([prompt, audio_file])
+                            # 3. 准备提示词并调用多模态模型
+                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            prompt = f"""
+                                你是一位亲切鼓励的英语口语私教。
+                                这是标准原句："{sentence}"
+                                这是学生读出来的音频文件。
+                                请直接听这段音频，并简短给出建议：
+                                1. 单词准确度（是否有读错）。
+                                2. 语调与流利度。
+                                3. 一句鼓励的话。
+                                """
 
-                        # 4. 展示反馈
-                        st.info(f"**AI 外教点评**:\n\n {response.text}")
+                            response = model.generate_content([prompt, audio_file_ref])
+
+                            # 4. 展示反馈结果
+                            st.info(f"**AI 外教点评**:\n\n {response.text}")
+
+                        except Exception as e:
+                            st.error(f"AI 诊断出错了，请再试一次。(错误信息: {e})")
 
             st.markdown("---")
