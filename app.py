@@ -101,7 +101,7 @@ if 'sentences' in st.session_state:
                             """
 
                             response = client.models.generate_content(
-                                model='gemini-2.5-flash',
+                                model='gemini-3.6-flash',  # 替换为最新的可用模型
                                 contents=[prompt, audio_file]
                             )
 
