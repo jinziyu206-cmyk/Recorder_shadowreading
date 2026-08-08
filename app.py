@@ -1,14 +1,11 @@
 import streamlit as st
-from gtts import gTTS
-import os
 import tempfile
+from google import genai
 from streamlit_mic_recorder import mic_recorder
-import google.generativeai as genai
 
-# 安全地从配置文件中读取 API Key，而不是直接写死在代码里
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-# 临时打印 key 的前 8 位，确认读到的格式是否正常
-st.write("当前生效的 Key 开头是:", st.secrets["GEMINI_API_KEY"][:8])
+# 初始化客户端（会自动读取 st.secrets["GEMINI_API_KEY"]）
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+
 
 # 1. 网页基本设置
 st.set_page_config(page_title="私人配音跟读教练", page_icon="🎙️", layout="centered")
@@ -84,29 +81,31 @@ if 'sentences' in st.session_state:
                 if st.button("✨ 让 AI 外教听听我的发音", key=f"ai_diag_{i}"):
                     with st.spinner("AI 正在认真听你的发音细节..."):
                         try:
-                            # 1. 把录音字节存为临时文件
+                            # 1. 保存为临时音频文件
                             with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
                                 f.write(audio_data['bytes'])
                                 temp_audio_path = f.name
 
-                            # 2. 使用 Gemini 官方文件上传接口
-                            audio_file_ref = genai.upload_file(temp_audio_path, mime_type="audio/wav")
+                            # 2. 上传文件到 Gemini
+                            audio_file = client.files.upload(file=temp_audio_path)
 
-                            # 3. 准备提示词并调用多模态模型
-                            model = genai.GenerativeModel("gemini-1.5-flash")
+                            # 3. 调用 gemini-2.5-flash 模型生成点评
                             prompt = f"""
-                                你是一位亲切鼓励的英语口语私教。
-                                这是标准原句："{sentence}"
-                                这是学生读出来的音频文件。
-                                请直接听这段音频，并简短给出建议：
-                                1. 单词准确度（是否有读错）。
-                                2. 语调与流利度。
-                                3. 一句鼓励的话。
-                                """
+                            你是一位亲切鼓励的英语口语私教。
+                            这是标准原句："{sentence}"
+                            这是学生读出来的音频文件。
+                            请直接听这段音频，并简短给出建议：
+                            1. 单词准确度（是否有读错）。
+                            2. 语调与流利度。
+                            3. 一句鼓励的话。
+                            """
 
-                            response = model.generate_content([prompt, audio_file_ref])
+                            response = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=[prompt, audio_file]
+                            )
 
-                            # 4. 展示反馈结果
+                            # 4. 显示评价
                             st.info(f"**AI 外教点评**:\n\n {response.text}")
 
                         except Exception as e:
