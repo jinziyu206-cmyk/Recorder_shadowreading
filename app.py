@@ -1,5 +1,6 @@
 import streamlit as st
 import tempfile
+from gtts import gTTS
 from google import genai
 from streamlit_mic_recorder import mic_recorder
 
@@ -27,10 +28,37 @@ speed_choice = st.radio(
 is_slow = True if "慢速" in speed_choice else False
 
 # 4. 智能切句逻辑
+import re
+
 def split_sentences(text):
-    import re
-    raw_sentences = re.split(r'(?<=[.!?])\s+', text.strip())
-    return [s.strip() for s in raw_sentences if s.strip()]
+  # 1. 先用老方法按标点符号切分出基础句子
+  raw_sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+  cleaned_sentences = [s.strip() for s in raw_sentences if s.strip()]
+
+  final_sentences = []
+
+  # 2. 遍历每一个句子，检查它的单词数量
+  for sentence in cleaned_sentences:
+    # 把句子按照空格拆分成单词列表
+    words = sentence.split()
+
+    # 如果单词数超过 12 个
+    if len(words) > 12:
+      # 找到中间的索引位置（向下取整）
+      mid = len(words) // 2
+
+      # 利用列表切片，分为前半句和后半句
+      part1 = " ".join(words[:mid])
+      part2 = " ".join(words[mid:])
+
+      # 将切开的两部分分别加入最终列表
+      final_sentences.append(part1)
+      final_sentences.append(part2)
+    else:
+      # 如果没有超过 12 个词，保持原样放进去
+      final_sentences.append(sentence)
+
+  return final_sentences
 
 if st.button("🚀 开始切分句子", type="primary"):
     if story_text:
